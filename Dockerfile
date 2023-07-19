@@ -33,14 +33,17 @@ RUN cd .. \
     && git clone -b v0.17.0 https://github.com/ngtcp2/ngtcp2 \
     && cd ngtcp2 \
     && autoreconf -fi \
-    && ./configure PKG_CONFIG_PATH=//usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig LDFLAGS="-Wl,-rpath,/usr/local/openssl/lib" --prefix=/usr/local/ngtcp2 --enable-lib-only \
+    && ./configure PKG_CONFIG_PATH=/usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig LDFLAGS="-Wl,-rpath,/usr/local/openssl/lib" --prefix=/usr/local/ngtcp2 --enable-lib-only \
     && make \
     && make install
+
+RUN find /usr/local -name "ngtcp2_crypto_quictls.pc"
 
 RUN cd .. \
     && git clone https://github.com/curl/curl \
     && cd curl \
     && autoreconf -fi \
+    && export PKG_CONFIG_PATH=/usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig:/usr/local/ngtcp2/lib/pkgconfig \
     && LDFLAGS="-Wl,-rpath,/usr/local/openssl/lib" ./configure -with-zlib --with-brotli --with-openssl=/usr/local/openssl --with-nghttp3=/usr/local/nghttp3 --with-ngtcp2=/usr/local/ngtcp2 \
     && make \
     && make install

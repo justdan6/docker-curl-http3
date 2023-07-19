@@ -26,7 +26,6 @@ jobs:
       with:
         context: .
         platforms: linux/amd64,linux/arm64
-        push: true
         tags: justdanz/curl-http3:latest
 
     - name: Verify Curl
