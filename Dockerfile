@@ -17,7 +17,7 @@ RUN apk add --no-cache \
 # https://curl.se/docs/http3.html
 RUN git clone --depth 1 -b openssl-3.0.9+quic https://github.com/quictls/openssl \
     && cd openssl \
-    && ./config enable-tls1_3 --prefix=/usr/local/quictls \
+    && ./config enable-tls1_3 --prefix=/usr/local/openssl \
     && make \
     && make install
 
@@ -33,7 +33,7 @@ RUN cd .. \
     && git clone -b v0.17.0 https://github.com/ngtcp2/ngtcp2 \
     && cd ngtcp2 \
     && autoreconf -fi \
-    && ./configure PKG_CONFIG_PATH=/usr/local/quictls/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig LDFLAGS="-Wl,-rpath,/usr/local/quictls/lib" --prefix=/usr/local/ngtcp2 --enable-lib-only \
+    && ./configure PKG_CONFIG_PATH=//usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig LDFLAGS="-Wl,-rpath,/usr/local/openssl/lib" --prefix=/usr/local/ngtcp2 --enable-lib-only \
     && make \
     && make install
 
@@ -41,7 +41,7 @@ RUN cd .. \
     && git clone https://github.com/curl/curl \
     && cd curl \
     && autoreconf -fi \
-    && LDFLAGS="-Wl,-rpath,/usr/local/quictls/lib" ./configure -with-zlib --with-brotli --with-openssl=/usr/local/quictls --with-nghttp3=/usr/local/nghttp3 --with-ngtcp2=/usr/local/ngtcp2 \
+    && LDFLAGS="-Wl,-rpath,/usr/local/openssl/lib" ./configure -with-zlib --with-brotli --with-openssl=/usr/local/openssl --with-nghttp3=/usr/local/nghttp3 --with-ngtcp2=/usr/local/ngtcp2 \
     && make \
     && make install
 
@@ -53,8 +53,8 @@ COPY --from=base /usr/local/nghttp3/lib/libnghttp3.so.8 /usr/local/nghttp3/lib/l
 COPY --from=base /usr/local/ngtcp2/lib/libngtcp2_crypto_quictls.so.0 /usr/local/ngtcp2/lib/libngtcp2_crypto_quictls.so.0
 COPY --from=base /usr/local/ngtcp2/lib/libngtcp2.so.14 /usr/local/ngtcp2/lib/libngtcp2.so.14
 COPY --from=base /usr/lib/libnghttp2.so.14 /usr/lib/libnghttp2.so.14
-COPY --from=base /usr/local/quictls/lib/libssl.so.81.3 /usr/local/quictls/lib/libssl.so.81.3
-COPY --from=base /usr/local/quictls/lib/libcrypto.so.81.3 /usr/local/quictls/lib/libcrypto.so.81.3
+COPY --from=base /usr/local/openssl/lib/libssl.so.81.3 /usr/local/openssl/lib/libssl.so.81.3
+COPY --from=base /usr/local/openssl/lib/libcrypto.so.81.3 /usr/local/openssl/lib/libcrypto.so.81.3
 COPY --from=base /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlidec.so.1
 COPY --from=base /usr/lib/libbrotlicommon.so.1 /usr/lib/libbrotlicommon.so.1
 
