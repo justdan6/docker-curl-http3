@@ -2,7 +2,7 @@
 Curl with HTTP/3 (using [quictls](https://github.com/quictls/openssl)) and [Brotli](https://github.com/google/brotli) support
 
 ```
-docker run --rm dockercurlhttp3:latest curl --version 
+docker run --rm justdanz/curl-http3:latest curl --version 
 
 
 curl 8.2.0-DEV (aarch64-unknown-linux-musl) libcurl/8.2.0-DEV OpenSSL/3.0.9 zlib/1.2.13 brotli/1.0.9 nghttp2/1.53.0 ngtcp2/0.17.0 nghttp3/0.13.0
