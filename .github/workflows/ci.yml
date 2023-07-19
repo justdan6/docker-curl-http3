@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: ci
 
 on:
   push:
@@ -11,16 +11,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-
-    - name: Build the Docker image
+    - 
+      name: Checkout
+      uses: actions/checkout@v3
+    -
+      name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+    -
+      name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - 
+      name: Build the Docker image
       uses: docker/build-push-action@v4
       with:
         context: .
-        tags: justdanz/curl-http3
         platforms: linux/amd64,linux/arm64
-        cache-from: |
-          ghcr.io/justdanz/curl-http3:latest
+        push: true
+        tags: justdanz/curl-http3:latest
 
     - name: Verify Curl
       run: |
