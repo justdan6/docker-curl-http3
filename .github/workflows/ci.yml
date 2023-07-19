@@ -1,0 +1,35 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build the Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        tags: justdanz/curl-http3
+        platforms: linux/amd64,linux/arm64
+        cache-from: |
+          ghcr.io/justdanz/curl-http3:latest
+
+    - name: Verify Curl
+      run: |
+        docker run -t justdanz/curl-http3 curl --version
+
+    - name: Verify Brotli support
+      run: |
+        docker run --rm justdanz/curl-http3 curl -sIL https://httpbin.org/brotli | grep -i 'content-encoding: br'
+
+    - name: Verify HTTP/3 support
+      run: |
+        docker run --rm justdanz/curl-http3 curl -sIL https://blog.cloudflare.com --http3 -H 'user-agent: mozilla' | grep 'HTTP/3'
