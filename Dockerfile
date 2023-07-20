@@ -37,8 +37,6 @@ RUN cd .. \
     && make \
     && make install
 
-RUN find /usr/local -name "ngtcp2_crypto_quictls.pc"
-
 RUN cd .. \
     && git clone https://github.com/curl/curl \
     && cd curl \
