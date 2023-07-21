@@ -21,8 +21,8 @@ RUN git clone --depth 1 -b openssl-3.0.9+quic https://github.com/quictls/openssl
     && make \
     && make install
 
-# Different architectures have different use different lib names
-RUN cp /usr/local/openssl/lib64 /usr/local/openssl/lib 2>/dev/null || :
+# Different architectures use different lib names
+RUN cp -r /usr/local/openssl/lib64 /usr/local/openssl/lib 2>/dev/null || :
 
 RUN cd .. \
     && git clone -b v0.13.0 https://github.com/ngtcp2/nghttp3 \
