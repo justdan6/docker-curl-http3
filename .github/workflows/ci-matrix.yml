@@ -52,6 +52,18 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true #,push=true
+      - 
+        name: Verify Curl
+        run: |
+          docker run -t justdanz/curl-http3 curl --version
+      - 
+        name: Verify Brotli support
+        run: |
+          docker run --rm justdanz/curl-http3 curl -sIL https://httpbin.org/brotli | grep -i 'content-encoding: br'
+      - 
+        name: Verify HTTP/3 support
+        run: |
+          docker run --rm justdanz/curl-http3 curl -sIL https://blog.cloudflare.com --http3 -H 'user-agent: mozilla' | grep 'HTTP/3'
       -
         name: Export digest
         run: |
