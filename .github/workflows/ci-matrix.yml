@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - "main"
+    tags:
+      - "v*.*.*"
 
 env:
   REGISTRY_IMAGE: justdanz/curl-http3
@@ -37,12 +39,12 @@ jobs:
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      # -
-      #   name: Login to Docker Hub
-      #   uses: docker/login-action@v2
-      #   with:
-      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
-      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       -
         name: Build and push by digest
         id: build
@@ -55,15 +57,15 @@ jobs:
       - 
         name: Verify Curl
         run: |
-          docker run -t justdanz/curl-http3 curl --version
+          docker run -t ${{ env.REGISTRY_IMAGE }} curl --version
       - 
         name: Verify Brotli support
         run: |
-          docker run --rm justdanz/curl-http3 curl -sIL https://httpbin.org/brotli | grep -i 'content-encoding: br'
+          docker run --rm ${{ env.REGISTRY_IMAGE }} curl -sIL https://httpbin.org/brotli | grep -i 'content-encoding: br'
       - 
         name: Verify HTTP/3 support
         run: |
-          docker run --rm justdanz/curl-http3 curl -sIL https://blog.cloudflare.com --http3 -H 'user-agent: mozilla' | grep 'HTTP/3'
+          docker run --rm ${{ env.REGISTRY_IMAGE }} curl -sIL https://blog.cloudflare.com --http3 -H 'user-agent: mozilla' | grep 'HTTP/3'
       -
         name: Export digest
         run: |
@@ -79,39 +81,39 @@ jobs:
           if-no-files-found: error
           retention-days: 1
   
-  # merge:
-  #   runs-on: ubuntu-latest
-  #   needs:
-  #     - build
-  #   steps:
-  #     -
-  #       name: Download digests
-  #       uses: actions/download-artifact@v3
-  #       with:
-  #         name: digests
-  #         path: /tmp/digests
-  #     -
-  #       name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v2
-  #     -
-  #       name: Docker meta
-  #       id: meta
-  #       uses: docker/metadata-action@v4
-  #       with:
-  #         images: ${{ env.REGISTRY_IMAGE }}
-  #     -
-  #       name: Login to Docker Hub
-  #       uses: docker/login-action@v2
-  #       with:
-  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
-  #         password: ${{ secrets.DOCKERHUB_TOKEN }}
-  #     -
-  #       name: Create manifest list and push
-  #       working-directory: /tmp/digests
-  #       run: |
-  #         docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-  #           $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
-  #     -
-  #       name: Inspect image
-  #       run: |
-  #         docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ steps.meta.outputs.version }}
+  merge:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    steps:
+      -
+        name: Download digests
+        uses: actions/download-artifact@v3
+        with:
+          name: digests
+          path: /tmp/digests
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      -
+        name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
+      -
+        name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ steps.meta.outputs.version }}

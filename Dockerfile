@@ -21,11 +21,11 @@ RUN git clone --depth 1 -b openssl-3.0.9+quic https://github.com/quictls/openssl
     && make \
     && make install
 
-# Different architectures use different lib names
+# Different architectures use different lib directories
 RUN cp -r /usr/local/openssl/lib64 /usr/local/openssl/lib 2>/dev/null || :
 
 RUN cd .. \
-    && git clone -b v0.13.0 https://github.com/ngtcp2/nghttp3 \
+    && git clone --depth 1 -b v0.13.0 https://github.com/ngtcp2/nghttp3 \
     && cd nghttp3 \
     && autoreconf -fi \
     && ./configure --prefix=/usr/local/nghttp3 --enable-lib-only \
@@ -33,7 +33,7 @@ RUN cd .. \
     && make install
 
 RUN cd .. \
-    && git clone -b v0.17.0 https://github.com/ngtcp2/ngtcp2 \
+    && git clone --depth 1 -b v0.17.0 https://github.com/ngtcp2/ngtcp2 \
     && cd ngtcp2 \
     && autoreconf -fi \
     && ./configure PKG_CONFIG_PATH=/usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig LDFLAGS="-Wl,-rpath,/usr/local/openssl/lib" --prefix=/usr/local/ngtcp2 --enable-lib-only \
@@ -41,7 +41,7 @@ RUN cd .. \
     && make install
 
 RUN cd .. \
-    && git clone https://github.com/curl/curl \
+    && git clone --depth 1 -b curl-8_2_0 https://github.com/curl/curl \
     && cd curl \
     && autoreconf -fi \
     && export PKG_CONFIG_PATH=/usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig:/usr/local/ngtcp2/lib/pkgconfig \
