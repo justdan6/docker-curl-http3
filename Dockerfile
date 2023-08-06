@@ -15,7 +15,7 @@ RUN apk add --no-cache \
   linux-headers
 
 # https://curl.se/docs/http3.html
-RUN git clone --depth 1 -b openssl-3.0.9+quic https://github.com/quictls/openssl \
+RUN git clone --depth 1 -b openssl-3.0.10+quic https://github.com/quictls/openssl \
     && cd openssl \
     && ./config enable-tls1_3 --prefix=/usr/local/openssl \
     && make \
