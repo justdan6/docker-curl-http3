@@ -24,17 +24,21 @@ jobs:
       with:
         context: .
         platforms: linux/amd64
-        push: true
-        tags: justdanz/curl-http3:latest
+        tags: justdanz/curl-http3
+        cache-from: |
+          ghcr.io/justdanz/curl-http3:latest
 
-    - name: Verify Curl
+    - 
+      name: Verify Curl
       run: |
-        docker run -t justdanz/curl-http3 curl --version
+        docker run -t justdanz/curl-http3 curl --version | grep "curl 8.3.0"
 
-    - name: Verify Brotli support
+    - 
+      name: Verify Brotli support
       run: |
         docker run --rm justdanz/curl-http3 curl -sIL https://httpbin.org/brotli | grep -i 'content-encoding: br'
 
-    - name: Verify HTTP/3 support
+    - 
+      name: Verify HTTP/3 support
       run: |
         docker run --rm justdanz/curl-http3 curl -sIL https://blog.cloudflare.com --http3 -H 'user-agent: mozilla' | grep 'HTTP/3'
