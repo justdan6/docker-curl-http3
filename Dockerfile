@@ -25,7 +25,7 @@ RUN git clone --depth 1 -b openssl-3.1.4+quic https://github.com/quictls/openssl
 RUN cp -r /usr/local/openssl/lib64 /usr/local/openssl/lib 2>/dev/null || :
 
 RUN cd .. \
-    && git clone --depth 1 -b v0.13.0 https://github.com/ngtcp2/nghttp3 \
+    && git clone --depth 1 -b v1.1.0 https://github.com/ngtcp2/nghttp3 \
     && cd nghttp3 \
     && autoreconf -fi \
     && ./configure --prefix=/usr/local/nghttp3 --enable-lib-only \
@@ -33,7 +33,7 @@ RUN cd .. \
     && make install
 
 RUN cd .. \
-    && git clone --depth 1 -b v0.17.0 https://github.com/ngtcp2/ngtcp2 \
+    && git clone --depth 1 -b v1.1.0 https://github.com/ngtcp2/ngtcp2 \
     && cd ngtcp2 \
     && autoreconf -fi \
     && ./configure PKG_CONFIG_PATH=/usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig LDFLAGS="-Wl,-rpath,/usr/local/openssl/lib" --prefix=/usr/local/ngtcp2 --enable-lib-only \
@@ -53,10 +53,10 @@ FROM alpine:3.18
 
 COPY --from=base /usr/local/bin/curl /usr/local/bin/curl
 COPY --from=base /usr/local/lib/libcurl.so.4 /usr/local/lib/libcurl.so.4
-COPY --from=base /usr/local/nghttp3/lib/libnghttp3.so.8 /usr/local/nghttp3/lib/libnghttp3.so.8
-COPY --from=base /usr/local/ngtcp2/lib/libngtcp2_crypto_quictls.so.0 /usr/local/ngtcp2/lib/libngtcp2_crypto_quictls.so.0
-COPY --from=base /usr/local/ngtcp2/lib/libngtcp2.so.14 /usr/local/ngtcp2/lib/libngtcp2.so.14
-COPY --from=base /usr/lib/libnghttp2.so.14 /usr/lib/libnghttp2.so.14
+COPY --from=base /usr/local/nghttp3/lib/libnghttp3.so /usr/local/nghttp3/lib/libnghttp3.so.9
+COPY --from=base /usr/local/ngtcp2/lib/libngtcp2_crypto_quictls.so /usr/local/ngtcp2/lib/libngtcp2_crypto_quictls.so.2
+COPY --from=base /usr/local/ngtcp2/lib/libngtcp2.so /usr/local/ngtcp2/lib/libngtcp2.so.16
+COPY --from=base /usr/lib/libnghttp2.so /usr/lib/libnghttp2.so.14
 COPY --from=base /usr/local/openssl/lib/libssl.so.81.3 /usr/local/openssl/lib/libssl.so.81.3
 COPY --from=base /usr/local/openssl/lib/libcrypto.so.81.3 /usr/local/openssl/lib/libcrypto.so.81.3
 COPY --from=base /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlidec.so.1
