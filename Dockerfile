@@ -1,4 +1,4 @@
-FROM alpine:3.18 AS base
+FROM alpine:3.19 AS base
 
 RUN apk add --no-cache \
   autoconf \
@@ -12,10 +12,11 @@ RUN apk add --no-cache \
   pkgconfig \
   wget \
   zlib-dev \
-  linux-headers
+  linux-headers \
+  libpsl-dev
 
 # https://curl.se/docs/http3.html
-RUN git clone --depth 1 -b openssl-3.1.4+quic https://github.com/quictls/openssl \
+RUN git clone --depth 1 -b openssl-3.1.5+quic https://github.com/quictls/openssl \
     && cd openssl \
     && ./config enable-tls1_3 --prefix=/usr/local/openssl \
     && make \
@@ -41,7 +42,7 @@ RUN cd .. \
     && make install
 
 RUN cd .. \
-    && git clone --depth 1 -b curl-8_5_0 https://github.com/curl/curl \
+    && git clone --depth 1 -b curl-8_6_0 https://github.com/curl/curl \
     && cd curl \
     && autoreconf -fi \
     && export PKG_CONFIG_PATH=/usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig:/usr/local/ngtcp2/lib/pkgconfig \
@@ -49,7 +50,7 @@ RUN cd .. \
     && make \
     && make install
 
-FROM alpine:3.18
+FROM alpine:3.19
 
 COPY --from=base /usr/local/bin/curl /usr/local/bin/curl
 COPY --from=base /usr/local/lib/libcurl.so.4 /usr/local/lib/libcurl.so.4
@@ -61,6 +62,9 @@ COPY --from=base /usr/local/openssl/lib/libssl.so.81.3 /usr/local/openssl/lib/li
 COPY --from=base /usr/local/openssl/lib/libcrypto.so.81.3 /usr/local/openssl/lib/libcrypto.so.81.3
 COPY --from=base /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlidec.so.1
 COPY --from=base /usr/lib/libbrotlicommon.so.1 /usr/lib/libbrotlicommon.so.1
+COPY --from=base /usr/lib/libpsl.so.5 /usr/lib/libpsl.so.5
+COPY --from=base /usr/lib/libidn2.so.0 /usr/lib/libidn2.so.0
+COPY --from=base /usr/lib/libunistring.so.5 /usr/lib/libunistring.so.5
 
 USER nobody
 RUN env | sort; which curl; curl --version
