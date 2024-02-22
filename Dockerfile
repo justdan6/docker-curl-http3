@@ -1,4 +1,4 @@
-FROM alpine:3.18 AS base
+FROM alpine:3.19 AS base
 
 RUN apk add --no-cache \
   autoconf \
@@ -42,7 +42,7 @@ RUN cd .. \
     && make \
     && make install
 
-FROM alpine:3.18
+FROM alpine:3.19
 
 COPY --from=base /usr/local/bin/curl /usr/local/bin/curl
 COPY --from=base /usr/local/lib/libcurl.so.4 /usr/local/lib/libcurl.so.4
