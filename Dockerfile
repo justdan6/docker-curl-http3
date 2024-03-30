@@ -34,7 +34,7 @@ RUN cd .. \
     && make install
 
 RUN cd .. \
-    && git clone --depth 1 -b curl-8_6_0 https://github.com/curl/curl \
+    && git clone --depth 1 -b curl-8_7_1 https://github.com/curl/curl \
     && cd curl \
     && autoreconf -fi \
     && export PKG_CONFIG_PATH=/usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig:/usr/local/ngtcp2/lib/pkgconfig \
