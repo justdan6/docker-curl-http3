@@ -1,4 +1,4 @@
-FROM alpine:3.19 AS base
+FROM alpine:3.20 AS base
 
 RUN apk add --no-cache \
   autoconf \
@@ -26,15 +26,16 @@ RUN git clone --depth 1 -b openssl-3.1.5+quic https://github.com/quictls/openssl
 RUN cp -r /usr/local/openssl/lib64 /usr/local/openssl/lib 2>/dev/null || :
 
 RUN cd .. \
-    && git clone --depth 1 -b v1.1.0 https://github.com/ngtcp2/nghttp3 \
+    && git clone --depth 1 -b v1.3.0 https://github.com/ngtcp2/nghttp3 \
     && cd nghttp3 \
-    && autoreconf -fi \
+    && git submodule update --init \
+    && autoreconf -i \
     && ./configure --prefix=/usr/local/nghttp3 --enable-lib-only \
     && make \
     && make install
 
 RUN cd .. \
-    && git clone --depth 1 -b v1.1.0 https://github.com/ngtcp2/ngtcp2 \
+    && git clone --depth 1 -b v1.5.0 https://github.com/ngtcp2/ngtcp2 \
     && cd ngtcp2 \
     && autoreconf -fi \
     && ./configure PKG_CONFIG_PATH=/usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig LDFLAGS="-Wl,-rpath,/usr/local/openssl/lib" --prefix=/usr/local/ngtcp2 --enable-lib-only \
@@ -42,7 +43,7 @@ RUN cd .. \
     && make install
 
 RUN cd .. \
-    && git clone --depth 1 -b curl-8_7_1 https://github.com/curl/curl \
+    && git clone --depth 1 -b curl-8_8_0 https://github.com/curl/curl \
     && cd curl \
     && autoreconf -fi \
     && export PKG_CONFIG_PATH=/usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig:/usr/local/ngtcp2/lib/pkgconfig \
@@ -50,7 +51,7 @@ RUN cd .. \
     && make \
     && make install
 
-FROM alpine:3.19
+FROM alpine:3.20
 
 COPY --from=base /usr/local/bin/curl /usr/local/bin/curl
 COPY --from=base /usr/local/lib/libcurl.so.4 /usr/local/lib/libcurl.so.4
