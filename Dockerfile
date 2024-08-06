@@ -26,7 +26,7 @@ RUN git clone --depth 1 -b openssl-3.1.5+quic https://github.com/quictls/openssl
 RUN cp -r /usr/local/openssl/lib64 /usr/local/openssl/lib 2>/dev/null || :
 
 RUN cd .. \
-    && git clone --depth 1 -b v1.3.0 https://github.com/ngtcp2/nghttp3 \
+    && git clone --depth 1 -b v1.4.0 https://github.com/ngtcp2/nghttp3 \
     && cd nghttp3 \
     && git submodule update --init \
     && autoreconf -i \
@@ -35,7 +35,7 @@ RUN cd .. \
     && make install
 
 RUN cd .. \
-    && git clone --depth 1 -b v1.5.0 https://github.com/ngtcp2/ngtcp2 \
+    && git clone --depth 1 -b v1.6.0 https://github.com/ngtcp2/ngtcp2 \
     && cd ngtcp2 \
     && autoreconf -fi \
     && ./configure PKG_CONFIG_PATH=/usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig LDFLAGS="-Wl,-rpath,/usr/local/openssl/lib" --prefix=/usr/local/ngtcp2 --enable-lib-only \
@@ -43,7 +43,7 @@ RUN cd .. \
     && make install
 
 RUN cd .. \
-    && git clone --depth 1 -b curl-8_8_0 https://github.com/curl/curl \
+    && git clone --depth 1 -b curl-8_9_1 https://github.com/curl/curl \
     && cd curl \
     && autoreconf -fi \
     && export PKG_CONFIG_PATH=/usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig:/usr/local/ngtcp2/lib/pkgconfig \
