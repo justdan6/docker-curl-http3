@@ -1,5 +1,5 @@
 test:
-	docker run -t justdanz/curl-http3 curl --version | grep "curl 8.8.0"
+	docker run -t justdanz/curl-http3 curl --version | grep "curl 8.9.1"
 	docker run --rm justdanz/curl-http3 curl -sIL https://httpbin.org/brotli | grep -i 'content-encoding: br'
 	docker run --rm justdanz/curl-http3 curl -sIL https://blog.cloudflare.com --http3 -H 'user-agent: mozilla' | grep 'HTTP/3'
 
