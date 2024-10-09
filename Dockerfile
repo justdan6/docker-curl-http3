@@ -16,7 +16,7 @@ RUN apk add --no-cache \
   libpsl-dev
 
 # https://curl.se/docs/http3.html
-RUN git clone --depth 1 -b openssl-3.1.5+quic https://github.com/quictls/openssl \
+RUN git clone --depth 1 -b openssl-3.3.0+quic https://github.com/quictls/openssl \
     && cd openssl \
     && ./config enable-tls1_3 --prefix=/usr/local/openssl \
     && make \
@@ -43,7 +43,7 @@ RUN cd .. \
     && make install
 
 RUN cd .. \
-    && git clone --depth 1 -b curl-8_9_1 https://github.com/curl/curl \
+    && git clone --depth 1 -b curl-8_10_1 https://github.com/curl/curl \
     && cd curl \
     && autoreconf -fi \
     && export PKG_CONFIG_PATH=/usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig:/usr/local/ngtcp2/lib/pkgconfig \
