@@ -1,44 +1,135 @@
-name: ci
+name: Build, test and publish
 
 on:
   pull_request:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  REGISTRY_IMAGE: justdanz/curl-http3
 
 jobs:
-
   build:
-    runs-on: ubuntu-latest
-
+    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-26.04-arm' || 'ubuntu-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+          - linux/arm/v7
+          - linux/arm/v6
+          - linux/ppc64le
     steps:
-    - 
-      name: Checkout
-      uses: actions/checkout@v3
-    -
-      name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
-    -
-      name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-    - 
-      name: Build the Docker image
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        platforms: linux/amd64
-        tags: justdanz/curl-http3
-        cache-from: |
-          ghcr.io/justdanz/curl-http3:latest
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Prepare platform name
+        id: platform
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: echo "pair=${PLATFORM//\//-}" >> "$GITHUB_OUTPUT"
+      - name: Set up QEMU
+        if: matrix.platform != 'linux/amd64' && matrix.platform != 'linux/arm64'
+        uses: docker/setup-qemu-action@v4.4.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.4.1
+      - name: Build and load the image under test
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          tags: curl-http3:test
+          load: true
+          cache-from: type=gha,scope=${{ steps.platform.outputs.pair }}
+          cache-to: type=gha,mode=max,scope=${{ steps.platform.outputs.pair }}
+      - name: Verify TLS, HTTP/1.1, HTTP/2, HTTP/3 and Brotli
+        env:
+          IMAGE: curl-http3:test
+          PLATFORM: ${{ matrix.platform }}
+        run: sh tests/smoke.sh
+      - name: Docker metadata
+        if: github.event_name != 'pull_request'
+        id: meta
+        uses: docker/metadata-action@v6.2.0
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4.7.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Push tested image by digest
+        if: github.event_name != 'pull_request'
+        id: push
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+      - name: Export digest
+        if: github.event_name != 'pull_request'
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+      - name: Upload digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: digests-${{ steps.platform.outputs.pair }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
 
-    - 
-      name: Verify Curl
-      run: |
-        docker run -t justdanz/curl-http3 curl --version | grep "curl 8.10.1"
-
-    - 
-      name: Verify Brotli support
-      run: |
-        docker run --rm justdanz/curl-http3 curl -sIL https://httpbin.org/brotli | grep -i 'content-encoding: br'
-
-    - 
-      name: Verify HTTP/3 support
-      run: |
-        docker run --rm justdanz/curl-http3 curl -sIL https://blog.cloudflare.com --http3 -H 'user-agent: mozilla' | grep 'HTTP/3'
+  publish:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v8.0.2
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.4.1
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6.2.0
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4.7.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Create and inspect multi-platform image
+        working-directory: /tmp/digests
+        env:
+          METADATA_JSON: ${{ steps.meta.outputs.json }}
+        run: |
+          mapfile -t tags < <(jq -r '.tags[]' <<< "$METADATA_JSON")
+          args=()
+          for tag in "${tags[@]}"; do args+=(-t "$tag"); done
+          sources=()
+          for digest in *; do sources+=("${REGISTRY_IMAGE}@sha256:${digest}"); done
+          docker buildx imagetools create "${args[@]}" "${sources[@]}"
+          docker buildx imagetools inspect "${tags[0]}"
