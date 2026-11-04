@@ -46,9 +46,12 @@ RUN git clone --depth 1 --branch "v${NGTCP2_VERSION}" https://github.com/ngtcp2/
     && make install
 
 ARG CURL_VERSION=8.23.0
-RUN git clone --depth 1 --branch "curl-$(echo "${CURL_VERSION}" | tr . _)" https://github.com/curl/curl.git \
-    && cd curl \
-    && autoreconf -fi \
+# The release archive contains the finalized version/date; the Git tag reports -DEV.
+ARG CURL_SHA256=e3de77cfa6367083c776a26647fc9f633b538c06c3baa73d931a252ac8f72b49
+RUN wget -q -O curl.tar.gz "https://curl.se/download/curl-${CURL_VERSION}.tar.gz" \
+    && echo "${CURL_SHA256}  curl.tar.gz" | sha256sum -c - \
+    && tar -xzf curl.tar.gz \
+    && cd "curl-${CURL_VERSION}" \
     && ./configure --prefix=/opt/curl --disable-static \
         --with-zlib --with-brotli --with-libpsl --with-nghttp2=/opt/curl \
         --with-openssl=/opt/curl --with-nghttp3=/opt/curl --with-ngtcp2=/opt/curl \

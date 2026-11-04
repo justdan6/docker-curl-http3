@@ -75,6 +75,8 @@ make test
 All source versions are Docker build arguments: `CURL_VERSION`, `OPENSSL_VERSION`,
 `NGHTTP2_VERSION`, `NGHTTP3_VERSION`, `NGTCP2_VERSION`, and `ALPINE_VERSION`.
 `BUILD_JOBS` defaults to 4; lower it on memory-constrained builders.
+`CURL_SHA256` pins the checksum of the official curl release archive and must be
+updated together with `CURL_VERSION`.
 
 ## Publish to Docker Hub
 
