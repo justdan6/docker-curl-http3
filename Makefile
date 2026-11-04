@@ -1,14 +1,20 @@
-test:
-	docker run -t justdanz/curl-http3 curl --version | grep "curl 8.10.1"
-	docker run --rm justdanz/curl-http3 curl -sIL https://httpbin.org/brotli | grep -i 'content-encoding: br'
-	docker run --rm justdanz/curl-http3 curl -sIL https://blog.cloudflare.com --http3 -H 'user-agent: mozilla' | grep 'HTTP/3'
+IMAGE ?= justdanz/curl-http3
+TAG ?= local
+PLATFORMS ?= linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/ppc64le,linux/s390x
+CURL_VERSION := $(shell sed -n 's/^ARG CURL_VERSION=//p' Dockerfile)
+
+.PHONY: build test build-all publish
 
 build:
-	docker build -t justdanz/curl-http3 .
+	docker buildx build --pull --load -t $(IMAGE):$(TAG) .
 
+test:
+	IMAGE=$(IMAGE):$(TAG) sh tests/smoke.sh
+
+# An OCI archive preserves every platform without publishing anything.
 build-all:
-	# docker buildx create --use
-	docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/ppc64le,linux/s390x -t justdanz/curl-http3 .
+	docker buildx build --pull --platform $(PLATFORMS) -t $(IMAGE):$(TAG) --output type=oci,dest=curl-http3.oci.tar .
 
+# Publish both a curl-version tag and latest as a multi-platform manifest.
 publish:
-	docker push justdanz/curl-http3
+	docker buildx build --pull --platform $(PLATFORMS) -t $(IMAGE):$(CURL_VERSION) -t $(IMAGE):latest --push .

@@ -1,71 +1,75 @@
-FROM alpine:3.20 AS base
+# syntax=docker/dockerfile:1
+
+ARG ALPINE_VERSION=3.24.3
+FROM alpine:${ALPINE_VERSION} AS build
 
 RUN apk add --no-cache \
-  autoconf \
-  automake \
-  brotli-dev \
-  build-base \
-  cmake \
-  git \
-  libtool \
-  nghttp2-dev \
-  pkgconfig \
-  wget \
-  zlib-dev \
-  linux-headers \
-  libpsl-dev
+    autoconf automake brotli-dev build-base ca-certificates git libpsl-dev \
+    libtool linux-headers perl pkgconf zlib-dev
 
-# https://curl.se/docs/http3.html
-RUN git clone --depth 1 -b openssl-3.3.0+quic https://github.com/quictls/openssl \
+ARG BUILD_JOBS=4
+ENV PKG_CONFIG_PATH=/opt/curl/lib/pkgconfig \
+    LD_LIBRARY_PATH=/opt/curl/lib
+WORKDIR /src
+
+# OpenSSL's QUIC TLS API replaces the deprecated quictls backend.
+# A fixed libdir works on both 32-bit and 64-bit architectures.
+ARG OPENSSL_VERSION=4.1.0
+RUN git clone --depth 1 --branch "openssl-${OPENSSL_VERSION}" https://github.com/openssl/openssl.git \
     && cd openssl \
-    && ./config enable-tls1_3 --prefix=/usr/local/openssl \
-    && make \
+    && ./config --prefix=/opt/curl --openssldir=/etc/ssl --libdir=lib shared no-tests \
+    && make -j"${BUILD_JOBS}" \
+    && make install_sw
+
+ARG NGHTTP2_VERSION=1.71.0
+RUN git clone --depth 1 --branch "v${NGHTTP2_VERSION}" https://github.com/nghttp2/nghttp2.git \
+    && cd nghttp2 \
+    && autoreconf -fi \
+    && ./configure --prefix=/opt/curl --enable-lib-only --disable-static \
+    && make -j"${BUILD_JOBS}" \
     && make install
 
-# Different architectures use different lib directories
-RUN cp -r /usr/local/openssl/lib64 /usr/local/openssl/lib 2>/dev/null || :
-
-RUN cd .. \
-    && git clone --depth 1 -b v1.4.0 https://github.com/ngtcp2/nghttp3 \
+ARG NGHTTP3_VERSION=1.19.0
+RUN git clone --depth 1 --branch "v${NGHTTP3_VERSION}" --recurse-submodules --shallow-submodules https://github.com/ngtcp2/nghttp3.git \
     && cd nghttp3 \
-    && git submodule update --init \
-    && autoreconf -i \
-    && ./configure --prefix=/usr/local/nghttp3 --enable-lib-only \
-    && make \
+    && autoreconf -fi \
+    && ./configure --prefix=/opt/curl --enable-lib-only --disable-static \
+    && make -j"${BUILD_JOBS}" \
     && make install
 
-RUN cd .. \
-    && git clone --depth 1 -b v1.6.0 https://github.com/ngtcp2/ngtcp2 \
+ARG NGTCP2_VERSION=1.26.0
+RUN git clone --depth 1 --branch "v${NGTCP2_VERSION}" https://github.com/ngtcp2/ngtcp2.git \
     && cd ngtcp2 \
     && autoreconf -fi \
-    && ./configure PKG_CONFIG_PATH=/usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig LDFLAGS="-Wl,-rpath,/usr/local/openssl/lib" --prefix=/usr/local/ngtcp2 --enable-lib-only \
-    && make \
+    && ./configure --prefix=/opt/curl --enable-lib-only --disable-static --with-openssl \
+    && make -j"${BUILD_JOBS}" \
     && make install
 
-RUN cd .. \
-    && git clone --depth 1 -b curl-8_10_1 https://github.com/curl/curl \
+ARG CURL_VERSION=8.23.0
+RUN git clone --depth 1 --branch "curl-$(echo "${CURL_VERSION}" | tr . _)" https://github.com/curl/curl.git \
     && cd curl \
     && autoreconf -fi \
-    && export PKG_CONFIG_PATH=/usr/local/openssl/lib/pkgconfig:/usr/local/nghttp3/lib/pkgconfig:/usr/local/ngtcp2/lib/pkgconfig \
-    && LDFLAGS="-Wl,-rpath,/usr/local/openssl/lib" ./configure -with-zlib --with-brotli --with-openssl=/usr/local/openssl --with-nghttp3=/usr/local/nghttp3 --with-ngtcp2=/usr/local/ngtcp2 \
-    && make \
-    && make install
+    && ./configure --prefix=/opt/curl --disable-static \
+        --with-zlib --with-brotli --with-libpsl --with-nghttp2=/opt/curl \
+        --with-openssl=/opt/curl --with-nghttp3=/opt/curl --with-ngtcp2=/opt/curl \
+        --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt --with-ca-path=/etc/ssl/certs \
+    && make -j"${BUILD_JOBS}" \
+    && make install \
+    && find /opt/curl/lib -type f \( -name '*.a' -o -name '*.la' \) -delete
 
-FROM alpine:3.20
+FROM alpine:${ALPINE_VERSION}
 
-COPY --from=base /usr/local/bin/curl /usr/local/bin/curl
-COPY --from=base /usr/local/lib/libcurl.so.4 /usr/local/lib/libcurl.so.4
-COPY --from=base /usr/local/nghttp3/lib/libnghttp3.so /usr/local/nghttp3/lib/libnghttp3.so.9
-COPY --from=base /usr/local/ngtcp2/lib/libngtcp2_crypto_quictls.so /usr/local/ngtcp2/lib/libngtcp2_crypto_quictls.so.2
-COPY --from=base /usr/local/ngtcp2/lib/libngtcp2.so /usr/local/ngtcp2/lib/libngtcp2.so.16
-COPY --from=base /usr/lib/libnghttp2.so /usr/lib/libnghttp2.so.14
-COPY --from=base /usr/local/openssl/lib/libssl.so.81.3 /usr/local/openssl/lib/libssl.so.81.3
-COPY --from=base /usr/local/openssl/lib/libcrypto.so.81.3 /usr/local/openssl/lib/libcrypto.so.81.3
-COPY --from=base /usr/lib/libbrotlidec.so.1 /usr/lib/libbrotlidec.so.1
-COPY --from=base /usr/lib/libbrotlicommon.so.1 /usr/lib/libbrotlicommon.so.1
-COPY --from=base /usr/lib/libpsl.so.5 /usr/lib/libpsl.so.5
-COPY --from=base /usr/lib/libidn2.so.0 /usr/lib/libidn2.so.0
-COPY --from=base /usr/lib/libunistring.so.5 /usr/lib/libunistring.so.5
+RUN apk add --no-cache brotli-libs ca-certificates libpsl zlib
+
+# Keep the actual SONAMEs and symlinks instead of hard-coding ABI versions.
+COPY --from=build /opt/curl/bin/curl /usr/local/bin/curl
+COPY --from=build /opt/curl/lib/ /opt/curl/lib/
+ENV LD_LIBRARY_PATH=/opt/curl/lib
 
 USER nobody
-RUN env | sort; which curl; curl --version
+RUN curl --version \
+    && curl --version | grep -w HTTP2 \
+    && curl --version | grep -w HTTP3 \
+    && curl --version | grep -w brotli
+
+CMD ["curl", "--version"]
