@@ -1,6 +1,6 @@
 IMAGE ?= justdanz/curl-http3
 TAG ?= local
-PLATFORMS ?= linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/ppc64le,linux/s390x
+PLATFORMS ?= linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/ppc64le
 CURL_VERSION := $(shell sed -n 's/^ARG CURL_VERSION=//p' Dockerfile)
 
 .PHONY: build test build-all publish

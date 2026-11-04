@@ -81,7 +81,10 @@ updated together with `CURL_VERSION`.
 ## Publish to Docker Hub
 
 The supported platforms are `linux/amd64`, `linux/arm64`, `linux/arm/v7`,
-`linux/arm/v6`, `linux/ppc64le`, and `linux/s390x`.
+`linux/arm/v6`, and `linux/ppc64le`, matching the original publishing matrix.
+`linux/s390x` remains excluded from publishing: it compiles, but the current
+HTTP/3 handshake test fails under QEMU. It needs successful HTTP/3 validation
+before being added to the published manifest.
 Docker Desktop includes emulation. On a standalone Linux builder, configure
 QEMU/binfmt for the non-native platforms before building.
 
@@ -112,7 +115,9 @@ Configure these repository Actions secrets:
 - `DOCKERHUB_TOKEN`: a Docker Hub access token with write permission to the image.
 
 Pull requests build and run the local integration tests on every supported
-platform, without registry credentials. Pushes to `main` do the same, then
+platform, without registry credentials. AMD64 and ARM64 use native runners;
+32-bit ARM and PowerPC use QEMU. The first emulated builds can take over an hour;
+subsequent builds reuse the dependency cache. Pushes to `main` do the same, then
 publish a multi-platform `latest` and a `sha-...` tag after all platforms pass.
 Version tags add the full version and major/minor tags, also updating `latest`:
 
